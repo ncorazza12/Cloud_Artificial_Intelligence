@@ -1,0 +1,251 @@
+{
+ "modelo": "gemini-3.1-flash-lite",
+ "tabela": [
+  {
+   "caso": "A original, com tool temporal",
+   "acertos": "2/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "2/3",
+   "rodadas_media": 5.3,
+   "tokens_media": 14180,
+   "custo_eq_media_usd": 0.00454,
+   "retentativas_api": 3
+  },
+  {
+   "caso": "B temporal, SEM tool temporal",
+   "acertos": "2/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "0/3",
+   "rodadas_media": 5.7,
+   "tokens_media": 9653,
+   "custo_eq_media_usd": 0.003,
+   "retentativas_api": 7
+  },
+  {
+   "caso": "B temporal, COM tool temporal",
+   "acertos": "1/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "3/3",
+   "rodadas_media": 6.7,
+   "tokens_media": 19529,
+   "custo_eq_media_usd": 0.00548,
+   "retentativas_api": 3
+  }
+ ],
+ "detalhes": [
+  {
+   "caso": "A original, com tool temporal",
+   "execucoes": [
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "usou_temporal": true,
+     "rodadas": 6,
+     "tokens": 17908,
+     "custo": 0.0053556,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_eventos_recentes",
+      "buscar_logs",
+      "consultar_configuracao",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1459
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "usou_temporal": false,
+     "rodadas": 7,
+     "tokens": 17388,
+     "custo": 0.0058606000000000005,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_deploys",
+      "consultar_custos",
+      "consultar_metricas",
+      "consultar_metricas",
+      "consultar_metricas",
+      "consultar_deploys",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "finish_reason": "MAX_TOKENS",
+     "tamanho_relatorio": 1041
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "terminou_sem_pedir_rollback",
+     "rollbacks": [],
+     "usou_temporal": true,
+     "rodadas": 3,
+     "tokens": 7243,
+     "custo": 0.0024076,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_eventos_recentes",
+      "consultar_metricas",
+      "consultar_custos",
+      "buscar_logs"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1601
+    }
+   ]
+  },
+  {
+   "caso": "B temporal, SEM tool temporal",
+   "execucoes": [
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "terminou_sem_pedir_rollback",
+     "rollbacks": [],
+     "usou_temporal": false,
+     "rodadas": 3,
+     "tokens": 5041,
+     "custo": 0.0019462,
+     "ferramentas": [
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys",
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1337
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-451"
+     ],
+     "usou_temporal": false,
+     "rodadas": 7,
+     "tokens": 12202,
+     "custo": 0.0036684,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_deploys",
+      "buscar_logs",
+      "consultar_metricas",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 555
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-451"
+     ],
+     "usou_temporal": false,
+     "rodadas": 7,
+     "tokens": 11717,
+     "custo": 0.0033984,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_eventos_recentes",
+      "buscar_logs",
+      "consultar_metricas",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1194
+    }
+   ]
+  },
+  {
+   "caso": "B temporal, COM tool temporal",
+   "execucoes": [
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "terminou_sem_pedir_rollback",
+     "rollbacks": [],
+     "usou_temporal": true,
+     "rodadas": 4,
+     "tokens": 10426,
+     "custo": 0.0033782,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "buscar_logs",
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_deploys"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1140
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "max_rodadas",
+     "rollbacks": [],
+     "usou_temporal": true,
+     "rodadas": 8,
+     "tokens": 24169,
+     "custo": 0.0062538,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "buscar_logs",
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "buscar_logs",
+      "consultar_configuracao"
+     ],
+     "finish_reason": null,
+     "tamanho_relatorio": 0
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-451"
+     ],
+     "usou_temporal": true,
+     "rodadas": 8,
+     "tokens": 23992,
+     "custo": 0.006794399999999999,
+     "ferramentas": [
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "consultar_eventos_recentes",
+      "buscar_logs",
+      "consultar_metricas",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 640
+    }
+   ]
+  }
+ ]
+}

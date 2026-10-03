@@ -1,0 +1,111 @@
+{
+ "modelo": "gemini-3.1-flash-lite",
+ "max_rodadas": 10,
+ "tabela": [
+  {
+   "caso": "A original, com tool temporal",
+   "execucoes": 3,
+   "rollback_certo_pedido": "3/3",
+   "concluiu_com_relatorio": "3/3",
+   "acerto_completo": "3/3",
+   "menciona_causa": "3/3",
+   "usou_temporal": "3/3",
+   "rodadas_media": 4.7,
+   "tokens_media": 15355,
+   "custo_eq_media_usd": 0.00479,
+   "retentativas_api": 3
+  }
+ ],
+ "detalhes": [
+  {
+   "caso": "A original, com tool temporal",
+   "execucoes": [
+    {
+     "acertou": true,
+     "rollback_certo": true,
+     "concluiu": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 4,
+     "tokens": 12168,
+     "custo": 0.0036435999999999994,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_eventos_recentes",
+      "buscar_logs",
+      "buscar_logs",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1680,
+     "relatorio": "Diagnóstico: O incidente foi causado pelo deploy `dep-442` no `recommendation-api` (versão 2.4.0), realizado às 13:58. Esta alteração introduziu um novo mecanismo de fallback (de `catalog-api` para `recommendation-api`) que gerou um loop recursivo infinito (`maximum fallback depth reached`). Isso sobrecarregou o serviço, disparou o autoscaling e causou timeouts em cascata no `api-gateway`, resultando no aumento da latência e no aumento dos custos cloud pelo uso de instâncias extras.\n\nEvidências:\n- Análise da série temporal: A `latencia_p95_ms` e a `taxa_erro_pct` no `api-gateway` começaram a subir às 14:02, logo após o deploy `dep-442`.\n- Logs do `recommendation-api`: Indicam falha de `maximum fallback depth reached depth=25` e `request queue saturation=96%` iniciando às 14:02:59.\n- Logs do `api-gateway`: Confirmam timeouts de 5000ms chamando o `recommendation-api` a partir das 14:03:11, resultando na abertura do circuit breaker.\n- Alteração no deploy `dep-442`: A configuração `FALLBACK_SERVICE: catalog-api -> recommendation-api` coincide com o sintoma identificado nos logs.\n\nImpacto: Aumento da latência do e-commerce, degradação da experiência do usuário, abertura de circuit breakers e aumento de custos operacionais devido ao escalonamento automático de instâncias (de 2 para 48 no `recommendation-api`).\n\nAção recomendada: Foi solicitado o rollback do deploy `dep-442` (status: `AGUARDANDO_APROVACAO_HUMANA`). Recomenda-se aprovar este rollback imediatamente para restaurar a estabilidade do sistema.\n\nNível de confiança: 95%. (A causalidade entre a nova regra de fallback e o loop infinito foi validada pelos logs de erro e pela ordem temporal dos eventos)."
+    },
+    {
+     "acertou": true,
+     "rollback_certo": true,
+     "concluiu": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 5,
+     "tokens": 16763,
+     "custo": 0.005198599999999999,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_custos",
+      "consultar_eventos_recentes",
+      "consultar_deploys",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1814,
+     "relatorio": "Aqui está o relatório estruturado conforme solicitado:\n\n**Diagnóstico**\nO incidente `INC-2026-0911` foi causado por um erro de lógica no deploy `dep-442` (versão 2.4.0) do serviço `recommendation-api`. A alteração introduziu um loop de recursão infinita no mecanismo de fallback, fazendo com que o serviço invocasse a si mesmo excessivamente ao processar falhas do `catalog-api`. Isso saturou as instâncias da `recommendation-api`, forçando um autoscaling descontrolado e sobrecarregando o `api-gateway` a montante.\n\n**Evidências**\n*   **Deploy:** O `dep-442` foi realizado às `13:58` e alterou a configuração `FALLBACK_SERVICE: catalog-api -> recommendation-api`.\n*   **Logs:** A partir de `14:02:57`, os logs da `recommendation-api` mostram: `invoking fallback target=recommendation-api` com a profundidade atingindo `maximum fallback depth reached depth=25` às `14:02:59`.\n*   **Metricas e Eventos:** O autoscaling da `recommendation-api` começou às `14:01` (subindo de 2 para 18 instâncias) e escalou para 48 instâncias às `14:03`. No mesmo horário (`14:03`), o `api-gateway` registrou alerta de latência (>5s) e aumento na taxa de erro (18,4%).\n\n**Impacto**\n*   **Operacional:** Degradação severa de performance no ecossistema; `api-gateway` apresentando p95 de latência de 6,2s e 18,4% de erro.\n*   **Financeiro:** Aumento do custo operacional devido ao autoscaling abrupto do `recommendation-api` (instâncias escalaram de 2 para 48).\n\n**Ação Recomendada**\nSolicitação de rollback do deploy `dep-442` aberta (Status: `AGUARDANDO_APROVACAO_HUMANA`). Nenhuma ação adicional é necessária além da aprovação humana deste pedido.\n\n**Nível de Confiança**\nAlto. Há correlação direta entre o horário do deploy `dep-442`, a falha de recursão nos logs de `14:02` e o início do autoscaling/latência observado às `14:03`."
+    },
+    {
+     "acertou": true,
+     "rollback_certo": true,
+     "concluiu": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 5,
+     "tokens": 17133,
+     "custo": 0.0055296,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_custos",
+      "consultar_eventos_recentes",
+      "analisar_serie_temporal",
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1694,
+     "relatorio": "**Diagnóstico:**\nO serviço `api-gateway` está sofrendo latência elevada (6200ms) e alta taxa de erros (18.4%) como sintoma de uma cascata de falhas iniciada no `recommendation-api`. O `recommendation-api` entrou em um ciclo de recursão infinita de fallbacks após o deploy `dep-442` (versão 2.4.0), que configurou uma dependência circular entre `catalog-api` e `recommendation-api`.\n\n**Evidências:**\n*   **Deploy:** O deploy `dep-442` foi realizado no `recommendation-api` às 13:58, introduzindo a alteração: \"novo fallback para resposta incompleta do catalogo\".\n*   **Logs:** Logs do `recommendation-api` às 14:02:59 mostram explicitamente `ERROR maximum fallback depth reached depth=25`, confirmando a recursão de chamadas.\n*   **Métricas:** A série temporal indica que a latência e a taxa de erro no `api-gateway` começaram a subir às 14:02. O `recommendation-api` atingiu 98% de CPU e 84% de memória logo após o início dos eventos de autoscaling (que escalou de 2 para 48 instâncias entre 14:01 e 14:03).\n\n**Impacto:**\n*   Degradação severa da experiência do usuário (lentidão e falhas 5xx no e-commerce).\n*   Aumento de custos de infraestrutura devido ao escalonamento agressivo do `recommendation-api` (48 instâncias rodando com saturação).\n\n**Ação Recomendada:**\n*   Foi solicitado o rollback do deploy `dep-442` no serviço `recommendation-api`. O pedido está registrado como `AGUARDANDO_APROVACAO_HUMANA`. Não é necessário intervir em outros serviços, pois a causa raiz é restrita ao mecanismo de fallback do `recommendation-api`.\n\n**Nível de Confiança:**\nElevado. A evidência de \"maximum fallback depth reached\" nos logs é conclusiva para o comportamento de recursão infinita observado."
+    }
+   ]
+  }
+ ]
+}

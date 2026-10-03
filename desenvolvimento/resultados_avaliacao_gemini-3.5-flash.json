@@ -1,0 +1,6 @@
+{
+ "modelo": "gemini-3.5-flash",
+ "max_rodadas": 10,
+ "tabela": [],
+ "detalhes": []
+}

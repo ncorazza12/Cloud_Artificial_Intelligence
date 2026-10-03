@@ -1,0 +1,287 @@
+{
+ "modelo": "gemini-3.1-flash-lite",
+ "tabela": [
+  {
+   "caso": "A original, com tool temporal",
+   "acertos_rollback": "3/3",
+   "cita_causa_no_relatorio": "3/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "3/3",
+   "rodadas_media": 4.7,
+   "tokens_media": 12966,
+   "custo_eq_media_usd": 0.00397,
+   "chamadas_repetidas_media": 0.0,
+   "retentativas_api": 3
+  },
+  {
+   "caso": "C confuso, SEM tool temporal",
+   "acertos_rollback": "0/3",
+   "cita_causa_no_relatorio": "0/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "0/3",
+   "rodadas_media": 5.3,
+   "tokens_media": 10928,
+   "custo_eq_media_usd": 0.0035,
+   "chamadas_repetidas_media": 0.0,
+   "retentativas_api": 7
+  },
+  {
+   "caso": "C confuso, COM tool temporal",
+   "acertos_rollback": "0/3",
+   "cita_causa_no_relatorio": "2/3",
+   "execucoes_validas": "3/3",
+   "usou_temporal": "3/3",
+   "rodadas_media": 6.3,
+   "tokens_media": 19938,
+   "custo_eq_media_usd": 0.00605,
+   "chamadas_repetidas_media": 0.0,
+   "retentativas_api": 5
+  }
+ ],
+ "detalhes": [
+  {
+   "caso": "A original, com tool temporal",
+   "execucoes": [
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 5,
+     "tokens": 14208,
+     "custo": 0.004351600000000001,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_custos",
+      "consultar_eventos_recentes",
+      "analisar_serie_temporal",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 2122,
+     "relatorio": "O incidente de latência e custo elevado tem como causa raiz o deploy **dep-442** da `recommendation-api`.\n\n### Diagnóstico\nO deploy `dep-442` (versão 2.4.0) introduziu uma alteração no mecanismo de fallback (`catalog-api` -> `recommendation-api`), que resultou em uma recursão de chamadas quando o campo `related_items` está ausente na resposta do catálogo. Isso gerou um erro em cascata (`maximum fallback depth reached`) e saturação das filas, levando o consumo de CPU a 98% e causando a degradação da latência observada no `api-gateway` a partir das 14:03.\n\n### Evidências\n*   **Cronologia:** O `cpu_pct` e `memoria_pct` do `recommendation-api` começaram a subir às 13:56, culminando na degradação da latência (`api-gateway` p95 > 5s) às 14:03, logo após o deploy `dep-442` às 13:58.\n*   **Logs:** O log da `recommendation-api` às 14:02:57 indica `WARN catalog response missing field related_items` seguido de `ERROR maximum fallback depth reached`, confirmando erro de lógica na nova versão.\n*   **Consequência:** A falha no serviço de recomendações causou um autoscaling desenfreado no `recommendation-api` (de 2 para 48 instâncias), o que explica o impacto financeiro (aumento de 10% no custo/h do `api-gateway` e consumo excessivo de recursos no `recommendation-api`).\n\n### Impacto\n*   **Operacional:** Lentidão severa e taxa de erro de 18.4% no `api-gateway`.\n*   **Financeiro:** Aumento do custo por hora no `recommendation-api` (devido ao escalonamento para 48 instâncias) e no `api-gateway`.\n\n### Ação Recomendada\n*   **Rollback:** Foi solicitado o rollback do deploy **dep-442** no serviço `recommendation-api` (status: `AGUARDANDO_APROVACAO_HUMANA`). A aprovação imediata é necessária para reverter o comportamento de autoscaling e estabilizar a latência.\n*   **Prevenção:** Investigar o contrato de dados entre `catalog-api` e `recommendation-api` para garantir que o campo `related_items` esteja presente ou que o fallback seja tratado de forma resiliente, sem recursão.\n\n**Nível de Confiança:** Alto. A correlação entre o deploy, o erro de recursão nos logs e o aumento súbito de recursos é clara e direta."
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 5,
+     "tokens": 13897,
+     "custo": 0.0041924,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 2048,
+     "relatorio": "O incidente de lentidão foi causado por uma falha no deploy `dep-442` no serviço `recommendation-api`.\n\n**Diagnóstico**\nO deploy `dep-442` (realizado às 13:58) introduziu uma nova lógica de fallback recursiva e ineficiente (`FALLBACK_SERVICE: catalog-api -> recommendation-api`). Essa alteração causou uma saturação de recursos (CPU em 98%) e latência extrema no serviço `recommendation-api` logo após o deploy. Esse comportamento se propagou como um efeito cascata para o `api-gateway`, que disparou alertas de latência e erro às 14:03.\n\n**Evidências**\n*   **Logs:** `recommendation-api` reportou \"maximum fallback depth reached\" (loop de fallback) e \"request queue saturation=96%\" imediatamente após o deploy.\n*   **Métricas:** `recommendation-api` apresenta CPU (98%), latência (5870ms) e erro (31.7%) críticos.\n*   **Cronologia:** O deploy `dep-442` ocorreu às 13:58, antecedendo a degradação das métricas (iniciada às 14:02) e o alerta do `api-gateway` (14:03).\n*   **Causa Raiz:** A lógica de fallback recém-implementada é a origem da saturação, confirmada pela análise de séries temporais que isolou a `recommendation-api` como o serviço que falhou primeiro.\n\n**Impacto**\n*   **Técnico:** Degradação severa da experiência do usuário (latência elevada e erros) no `api-gateway` e saturação de recursos no `recommendation-api`.\n*   **Financeiro:** Aumento dos custos cloud devido ao autoscaling agressivo (instâncias de `recommendation-api` saltaram de 2 para 48 para tentar mitigar a saturação).\n\n**Ação Recomendada**\n*   Foi solicitado o **rollback do deploy `dep-442`** no `recommendation-api`. A solicitação está registrada e aguardando aprovação humana (status: `AGUARDANDO_APROVACAO_HUMANA`).\n*   Após a execução do rollback, recomenda-se revisar a lógica de fallback para evitar recursividade (fallback do `catalog-api` para o próprio `recommendation-api` ou configurações que gerem chamadas cíclicas).\n\n**Nível de Confiança**\nAlto. As evidências de log e a correlação temporal entre o deploy e a saturação de recursos são consistentes."
+    },
+    {
+     "acertou": true,
+     "infra": false,
+     "motivo": "ok",
+     "rollbacks": [
+      "dep-442"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 4,
+     "tokens": 10794,
+     "custo": 0.0033607999999999997,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_custos",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1893,
+     "relatorio": "O incidente INC-2026-0911, caracterizado pela lentidão no e-commerce e aumento de custos, foi diagnosticado.\n\n**Diagnóstico**\nA causa raiz foi uma implementação incorreta de *fallback* introduzida no deploy `dep-442` do `recommendation-api`. O novo mecanismo de redundância entra em um loop recursivo quando a `catalog-api` retorna dados incompletos, atingindo o limite de profundidade de fallback (depth=25) e saturando a fila de requisições.\n\n**Evidências**\n1. **Sequência Temporal:** O deploy `dep-442` ocorreu às 13:58. A instabilidade do `api-gateway` (latência e erro) e o *autoscaling* massivo do `recommendation-api` (de 2 para 48 instâncias) iniciaram logo após, às 14:01-14:03.\n2. **Logs:** Registros no `recommendation-api` confirmam o comportamento anômalo: `ERROR maximum fallback depth reached depth=25` e `INFO invoking fallback target=recommendation-api`.\n3. **Métricas:** O `api-gateway` apresentou latência de 6200ms e 18.4% de erro, sintomas diretos da sobrecarga gerada pela falha do serviço de recomendação.\n\n**Impacto**\n*   **Operacional:** Degradação severa da experiência do usuário (latência elevada) e instabilidade do serviço `recommendation-api`.\n*   **Financeiro:** Aumento imediato do custo cloud, visível através do multiplicador de 1.1x no `api-gateway` e do *autoscaling* agressivo no `recommendation-api` para tentar conter a saturação.\n\n**Ação Recomendada**\nSolicitei o **rollback imediato do deploy `dep-442`** no `recommendation-api`. O pedido está registrado e aguarda aprovação humana. Após o rollback, recomenda-se revisar a lógica de *fallback* para impedir recursão e garantir que a `catalog-api` entregue os campos esperados antes de reverter a funcionalidade.\n\n**Nível de Confiança**\n**Muito Alta.** A correlação entre o log de erro recursivo, a natureza da alteração (fallback) e o início do problema pós-deploy é direta e tecnicamente consistente."
+    }
+   ]
+  },
+  {
+   "caso": "C confuso, SEM tool temporal",
+   "execucoes": [
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": false,
+     "usou_temporal": false,
+     "rodadas": 5,
+     "tokens": 10448,
+     "custo": 0.0035816,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_eventos_recentes",
+      "buscar_logs",
+      "consultar_deploys",
+      "consultar_metricas",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1900,
+     "relatorio": "### Diagnóstico\nA lentidão no `checkout-api` (sintoma) é causada por uma degradação de performance no `catalog-api` (causa raiz). O `catalog-api` está apresentando alta latência de resposta devido a pausas prolongadas de Garbage Collection (GC) causadas pela exaustão de memória (91% ocupada). O problema foi introduzido pelo deploy `dep-453` no `catalog-api`, que alterou o nível de log para DEBUG.\n\n### Evidências\n1.  **logs `catalog-api`**: Registram erros de \"GC pause\" atingindo até 1900ms a partir das 16:07, correlacionados com o aumento de memória.\n2.  **logs `checkout-api`**: Mostram `timeouts` recorrentes ao consumir o endpoint `/items` do `catalog-api` (ex: 800ms de espera, erros 504).\n3.  **Deploy `dep-453`**: Identificado como a mudança que alterou logs para DEBUG, consistente com o aumento de uso de CPU/memória e frequentes pausas de GC observadas logo após o deploy (15:25).\n4.  **Métricas**: O `checkout-api` sofreu autoscaling às 16:05 em uma tentativa automática de mitigar a latência (p95 > 1000ms), sem sucesso, pois o gargalo é externo.\n\n### Impacto\n*   **Checkout:** Aumento da latência p95 para > 1000ms e falhas esporádicas (erros 504) durante a finalização de pedidos.\n*   **Financeiro:** Potencial perda de conversão devido à frustração do cliente no fluxo de pagamento.\n\n### Ação Recomendada\nSolicitei o rollback do deploy `dep-453` (status: `AGUARDANDO_APROVACAO_HUMANA`). Recomenda-se aprovar este rollback imediatamente para reverter a configuração de logs para o padrão anterior e normalizar o uso de memória do `catalog-api`.\n\n### Nível de Confiança\n**Alto.** A correlação entre a mudança de nível de log para DEBUG, o aumento das pausas de GC no `catalog-api` e os timeouts no `checkout-api` é direta. Ainda não foi verificado se há um \"memory leak\" estrutural ou apenas sobrecarga imediata pelos logs verbosos, mas o rollback é a medida mais segura e imediata."
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": false,
+     "usou_temporal": false,
+     "rodadas": 5,
+     "tokens": 9804,
+     "custo": 0.0030797999999999997,
+     "ferramentas": [
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys",
+      "consultar_metricas",
+      "buscar_logs",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1227,
+     "relatorio": "Diagnóstico: O `checkout-api` apresenta latência elevada e erros 504 devido a uma dependência degradada no `catalog-api`. A causa raiz é o deploy `dep-453` no `catalog-api` (realizado às 15:25), que alterou o nível de log para DEBUG. Esta mudança aumentou o consumo de memória (91%) e causou pausas severas de Garbage Collection (até 1900ms), impactando diretamente os serviços que dependem de consultas ao catálogo.\n\nEvidências:\n*   Logs do `catalog-api` mostram pausas de GC crescentes após as 15:33, atingindo 1900ms às 16:07.\n*   Logs do `checkout-api` mostram latência no `catalog-api` já às 15:44, precedendo seu próprio deploy (`dep-455`).\n*   O deploy `dep-453` alterou o nível de log para DEBUG, condizente com o início da degradação de performance do `catalog-api`.\n\nImpacto: Clientes enfrentando lentidão e falhas (erros 504) ao finalizar pedidos no checkout devido a Timeouts downstream.\n\nAção Recomendada: O pedido de rollback do `dep-453` foi solicitado e aguarda aprovação humana. Nenhuma ação adicional no `checkout-api` é necessária no momento, pois o problema é reflexo do `catalog-api`.\n\nNível de confiança: Alto. A correlação temporal entre a alteração de configuração e a degradação dos logs de GC é clara."
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": false,
+     "usou_temporal": false,
+     "rodadas": 6,
+     "tokens": 12532,
+     "custo": 0.0038334,
+     "ferramentas": [
+      "consultar_metricas",
+      "consultar_eventos_recentes",
+      "consultar_deploys",
+      "buscar_logs",
+      "consultar_metricas",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1456,
+     "relatorio": "**Diagnóstico:**\nO serviço `checkout-api` apresenta lentidão e timeouts (`p95: 1068ms`) causados por latência elevada no serviço `catalog-api`, que é dependente. O `catalog-api` está operando com uso de memória crítico (91%) e latência elevada, decorrente da alteração do nível de log para `DEBUG` realizada no deploy `dep-453`.\n\n**Evidências:**\n1. **Logs (`checkout-api`):** Registram `timeout calling catalog-api` a partir das 16:03.\n2. **Métricas (`catalog-api`):** Uso de memória em 91,53% e `p95` de 617ms.\n3. **Deploy (`catalog-api` - `dep-453`):** Realizado às 15:25, alterou o nível de log do endpoint `/items` para `DEBUG`, o que causou o consumo excessivo de recursos e degradação de performance.\n4. **Coincidência:** O deploy `dep-455` no `checkout-api` às 15:52 coincidiu com o aumento das falhas, mas a causa raiz é o esgotamento de recursos no `catalog-api` disparado em `dep-453`.\n\n**Impacto:**\nDegradação severa na experiência do cliente, com timeouts em chamadas para o `catalog-api` resultando em erros `504` no checkout.\n\n**Ação Recomendada:**\nSolicitado o rollback do deploy `dep-453` no serviço `catalog-api`. O pedido está em estado `AGUARDANDO_APROVACAO_HUMANA`. Recomenda-se aprovar imediatamente para restaurar a estabilidade do `catalog-api` e, consequentemente, do `checkout-api`.\n\n**Nível de Confiança:**\nAlto. A correlação entre o deploy de debug, o aumento de consumo de memória e a latência de rede entre os serviços é clara."
+    }
+   ]
+  },
+  {
+   "caso": "C confuso, COM tool temporal",
+   "execucoes": [
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": false,
+     "usou_temporal": true,
+     "rodadas": 5,
+     "tokens": 15684,
+     "custo": 0.0058758000000000005,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "buscar_logs",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 2044,
+     "relatorio": "Aqui está o relatório estruturado da investigação:\n\n**Diagnóstico**\nA causa raiz do incidente é a alteração do nível de log para `DEBUG` no endpoint `/items` do `catalog-api`, realizada no deploy `dep-453` às 15:25. Esta mudança gerou sobrecarga e lentidão no serviço de catálogo, que se propagou como um efeito cascata para o `checkout-api`. A degradação no checkout começou a ser observada às 15:40, resultando em *timeouts* e erros 504 no processo de finalização de pedidos.\n\n**Evidências**\n*   **Análise Temporal:** A ferramenta `analisar_serie_temporal` do `checkout-api` identificou que a mudança de tendência na `latencia_p95_ms` e na `taxa_erro_pct` iniciou-se às 15:40.\n*   **Logs do Checkout:** Os logs do `checkout-api` mostram o início dos problemas: `15:44 WARN call catalog-api /items latency 480ms`, seguido por `16:03 WARN timeout calling catalog-api after 800ms` e culminando em `16:09 ERROR POST /checkout 504 after 2100ms`.\n*   **Deploys:** O `consultar_deploys` do `catalog-api` confirma que o deploy `dep-453`, realizado às 15:25, alterou o nível de log do endpoint `/items` de `INFO` para `DEBUG`.\n*   **Métricas Atuais:** O `checkout-api` apresenta latência p95 de 1068.99ms, taxa de erro de 4.86% e o número de instâncias escalou de 5 para 8 (evento de autoscaling registrado às 16:05).\n\n**Impacto**\nDegradação severa na finalização de pedidos para os clientes, com aumento da latência e falhas de requisição (erro 504). Houve também um custo operacional adicional devido ao acionamento do autoscaling no `checkout-api`.\n\n**Ação recomendada**\nJá foi solicitado o rollback do deploy `dep-453` no `catalog-api`. A solicitação foi registrada com sucesso, porém o sistema indica que o pedido está `AGUARDANDO_APROVACAO_HUMANA`. Recomendo que a equipe responsável aprove este rollback imediatamente para restaurar o nível de log original e estabilizar a latência do catálogo.\n\n**Nível de confiança**\nAlto (A correlação entre a mudança de log, o início da latência no `catalog-api` e os *timeouts* no `checkout-api` é direta)."
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 8,
+     "tokens": 25439,
+     "custo": 0.0070848000000000005,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "buscar_logs",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1799,
+     "relatorio": "O incidente foi analisado e a causa raiz identificada.\n\n### Diagnóstico\nA latência observada no `checkout-api` (desde 16:10) é um efeito cascata causado pela degradação de performance e exaustão de memória no serviço `catalog-api`. O `catalog-api` já apresentava instabilidade de memória desde o deploy `dep-451` (12:10), mas o problema agravou-se drasticamente após o deploy `dep-453` (15:25), que alterou o nível de log para `DEBUG`. O aumento do volume de logs exacerbado pela pressão de heap existente causou pausas severas de Garbage Collection (GC) e latência elevada, impactando as chamadas do `checkout-api`.\n\n### Evidências\n*   **Correlação Temporal:** O `catalog-api` iniciou uma piora na latência às 15:30, logo após o deploy `dep-453` (15:25). O `checkout-api` começou a degradar às 15:40.\n*   **Logs:** `catalog-api` registra pausas de GC recorrentes com heap acima de 87% (ex: 15:33, 15:41, 16:07).\n*   **Métricas:** O `catalog-api` apresenta degradação gradual de memória desde 12:05 (após `dep-451`).\n\n### Impacto\n*   **Operacional:** Alta latência no `checkout-api` e `catalog-api`.\n*   **Financeiro:** Clientes enfrentando demora para finalizar pedidos, com risco direto de queda na taxa de conversão durante o checkout.\n\n### Ação Recomendada\n*   **Rollback:** Solicitei o rollback do deploy **dep-453** no `catalog-api` para reverter a alteração de logs para `DEBUG` e aliviar a pressão imediata. (Status: `AGUARDANDO_APROVACAO_HUMANA`).\n*   **Próximo Passo:** Após o rollback do `dep-453`, a equipe de engenharia deve investigar o vazamento de memória ou ineficiência de alocação introduzido no **dep-451** (12:10) para evitar recorrência.\n\n### Nível de Confiança\n*   **Alta** na causalidade do `dep-453` como gatilho da degradação aguda e no impacto propagado ao `checkout-api`."
+    },
+    {
+     "acertou": false,
+     "infra": false,
+     "motivo": "rollback_errado",
+     "rollbacks": [
+      "dep-453"
+     ],
+     "cita_causa": true,
+     "usou_temporal": true,
+     "rodadas": 6,
+     "tokens": 18692,
+     "custo": 0.0052014,
+     "ferramentas": [
+      "consultar_metricas",
+      "analisar_serie_temporal",
+      "buscar_logs",
+      "consultar_deploys",
+      "analisar_serie_temporal",
+      "consultar_deploys",
+      "solicitar_rollback"
+     ],
+     "chamadas_repetidas": 0,
+     "finish_reason": "STOP",
+     "tamanho_relatorio": 1715,
+     "relatorio": "O incidente de latência no `checkout-api` tem como causa raiz um problema de performance no `catalog-api`, que é uma dependência direta do checkout.\n\n### Diagnóstico\nO `checkout-api` começou a apresentar latência elevada e timeouts (erros 504) por volta das 16h10, devido à falha de comunicação com o serviço `catalog-api`. A análise de série temporal do `catalog-api` mostrou que o serviço passou a apresentar degradação severa em latência e taxa de erro a partir das 15h30, imediatamente após o deploy `dep-453`.\n\n### Evidências\n*   **Logs do `checkout-api`**: Registro de timeouts e avisos de latência ao chamar o `/items` do `catalog-api` (ex: `WARN timeout calling catalog-api after 800ms`).\n*   **Correlação Temporal**: A degradação do `catalog-api` iniciou-se às 15h30 (latência/erro). O deploy `dep-453` (\"ajuste do nível de log de INFO para DEBUG no endpoint /items\") ocorreu às 15h25.\n*   **Comportamento do `catalog-api`**: O serviço apresentava aumento de consumo de memória desde as 12h05 (`dep-451`), mas o impacto crítico de performance iniciou-se especificamente com a mudança de nível de log do `dep-453`.\n\n### Impacto\n*   **Operacional**: Degradacão da experiência de compra (checkout lento) e aumento da taxa de erro de checkout para 4.86%.\n*   **Financeiro**: Potencial perda de vendas devido à falha no fechamento de pedidos (504 Errors).\n\n### Ação Recomendada\nSolicitei o rollback do deploy **`dep-453`** no `catalog-api`, pois a alteração do log para DEBUG introduziu um gargalo de processamento crítico. O rollback está **aguardando aprovação humana**.\n\n**Nível de Confiança**: Alta (a correlação entre a mudança de log e a degradação imediata de performance do endpoint dependente é clara)."
+    }
+   ]
+  }
+ ]
+}
